@@ -4,9 +4,11 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { WebSocketServer } from 'ws';
 import { attachRooms } from './rooms.ts';
+import { isAllowedOrigin, parseAllowedOrigins } from './origins.ts';
 
 const production = process.argv.includes('--production') || process.env.NODE_ENV === 'production';
 const port = Number(process.env.PORT || 3000);
+const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
 const root = path.resolve(fileURLToPath(new URL('../', import.meta.url)));
 const vite = production
   ? null
@@ -26,7 +28,15 @@ const mime: Record<string, string> = {
 };
 const server = createServer(async (req, res) => {
   if (req.url === '/healthz') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
+    const origin = req.headers.origin;
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
+      Vary: 'Origin',
+      ...(origin && isAllowedOrigin(origin, req.headers.host, allowedOrigins)
+        ? { 'Access-Control-Allow-Origin': origin }
+        : {}),
+    });
     res.end(JSON.stringify({ ok: true, game: 'Surfer Glide' }));
     return;
   }
@@ -66,20 +76,17 @@ const server = createServer(async (req, res) => {
 const wss = new WebSocketServer({ noServer: true, maxPayload: 2048 });
 server.on('upgrade', (req, socket, head) => {
   if (req.url !== '/ws') return; // Vite owns its separate HMR websocket.
-  if (
-    req.headers.origin &&
-    req.headers.origin !== `http://${req.headers.host}` &&
-    req.headers.origin !== `https://${req.headers.host}`
-  ) {
-    socket.destroy();
+  if (!isAllowedOrigin(req.headers.origin, req.headers.host, allowedOrigins)) {
+    socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
     return;
   }
   wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
 });
 const multiplayer = attachRooms(wss);
 server.listen(port, '0.0.0.0', () => {
+  const listeningPort = (server.address() as { port: number }).port;
   console.log(
-    `\n  SURFER GLIDE\n  Local: http://localhost:${port}\n  Multiplayer: /ws\n  Mode: ${production ? 'production' : 'development'}\n`,
+    `\n  SURFER GLIDE\n  Local: http://localhost:${listeningPort}\n  Multiplayer: /ws\n  Mode: ${production ? 'production' : 'development'}\n`,
   );
 });
 async function shutdown() {

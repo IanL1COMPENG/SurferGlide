@@ -11,3 +11,11 @@ __pycache__/
 *.pyc
 *.blend1
 *.blend2
+.vercel/
+.codex/
+.agents/
+.aws/
+*.pem
+*.key
+.netrc
+.npmrc

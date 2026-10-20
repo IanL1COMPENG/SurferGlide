@@ -70,7 +70,13 @@ npm start
 
 ### Render
 
-The included `render.yaml` declares a single Node web service. Connect this repository in Render and create a Blueprint deployment. Select the hosting plan that suits your use. The build and start commands are already configured.
+The included `render.yaml` declares a single **Free** Node web service. Connect this repository in Render and create a Blueprint deployment. The build installs development dependencies needed by Vite and TypeScript before compiling. Rooms live in memory, so keep one instance.
+
+### Vercel + free multiplayer backend
+
+Follow the [exact GitHub, Vercel, and Render deployment guide](docs/vercel-deployment.md). Vercel serves `dist/` using the included `vercel.json`; the existing Node simulation runs on one Render Free service. Set the public `VITE_MULTIPLAYER_URL` in Vercel and the exact frontend `ALLOWED_ORIGINS` on the backend. Local development keeps using same-origin `/ws` when the endpoint is empty.
+
+The normal production build passes. Deployment changes preserve the game and design, disable public source maps, and add an output/private-file check. Vercel Hobby is for personal, non-commercial projects; Render Free can sleep and restart. See the guide for limits, cold starts, preview origins, account setup, and verification. The game requires no API keys.
 
 ### Docker
 
@@ -98,6 +104,7 @@ npm run check       # Strict TypeScript checks
 npm run format      # Format source and documentation with Prettier
 npm test            # Gameplay, economy, progression, and real WebSocket integration tests
 npm run build       # Type check and production bundle
+npm run verify:deploy  # Check that only intended game files are public
 node scripts/smoke.mjs  # Check a running production server (optional URL argument)
 ```
 

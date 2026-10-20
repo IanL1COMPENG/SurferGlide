@@ -2,9 +2,15 @@ import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
 
 const base = new URL(process.argv[2] || 'http://127.0.0.1:3000');
-const health = await fetch(new URL('/healthz', base));
+const backend = new URL(process.argv[3] || base);
+const health = await fetch(new URL('/healthz', backend), {
+  headers: { Origin: base.origin },
+  signal: AbortSignal.timeout(90_000),
+});
 assert.equal(health.status, 200);
 assert.equal((await health.json()).game, 'Surfer Glide');
+if (backend.origin !== base.origin)
+  assert.equal(health.headers.get('access-control-allow-origin'), base.origin);
 const response = await fetch(base);
 assert.equal(response.status, 200);
 const html = await response.text();
@@ -26,8 +32,8 @@ const preview = await fetch(new URL('/previews/rider-kai.png', base));
 assert.equal(preview.status, 200);
 assert.match(preview.headers.get('content-type'), /image\/png/);
 
-const url = new URL('/ws', base);
-url.protocol = base.protocol === 'https:' ? 'wss:' : 'ws:';
+const url = new URL('/ws', backend);
+url.protocol = backend.protocol === 'https:' ? 'wss:' : 'ws:';
 await new Promise((resolve, reject) => {
   const ws = new WebSocket(url, { origin: base.origin });
   const timer = setTimeout(() => {

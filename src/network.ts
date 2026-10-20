@@ -1,4 +1,5 @@
 import type { ClientMessage, RoomSnapshot, ServerMessage } from './core/protocol.ts';
+import { multiplayerEndpoint, warmMultiplayer } from './core/deployment.ts';
 
 export class Multiplayer {
   id = '';
@@ -10,11 +11,15 @@ export class Multiplayer {
   onDisconnect: () => void = () => {};
   async connect() {
     if (this.socket?.readyState === WebSocket.OPEN && this.id) return;
+    const endpoint = multiplayerEndpoint(location.href, import.meta.env.VITE_MULTIPLAYER_URL);
+    if (endpoint.host !== location.host) {
+      // Free Node hosts can sleep. Wake the server before the short WS handshake.
+      // This runs only when a player explicitly creates or joins a room.
+      await warmMultiplayer(endpoint);
+    }
     return new Promise<void>((resolve, reject) => {
       let settled = false;
-      const socket = new WebSocket(
-        `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws`,
-      );
+      const socket = new WebSocket(endpoint);
       this.socket = socket;
       const timeout = setTimeout(() => {
         socket.close();
@@ -39,7 +44,7 @@ export class Multiplayer {
         if (!settled) {
           clearTimeout(timeout);
           reject(
-            new Error('Multiplayer is unavailable. Run the included Node server and try again.'),
+            new Error('Multiplayer is unavailable. Check the multiplayer server and try again.'),
           );
         }
       };

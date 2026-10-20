@@ -1,0 +1,19 @@
+# Allow only build inputs in CLI uploads. GitHub deployments use the tracked
+# repository; only dist/ is publicly served in either deployment method.
+*
+!package.json
+!package-lock.json
+!tsconfig.json
+!vite.config.ts
+!index.html
+!vercel.json
+!public/
+!public/**
+!src/
+!src/**
+!server/
+!server/**
+!tests/
+!tests/**
+!scripts/
+!scripts/check-deploy.mjs
