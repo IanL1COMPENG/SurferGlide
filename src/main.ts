@@ -1,5 +1,13 @@
-import './style.css';
-import { BOARDS, RIDERS, COURSES, RANKS, rankFor, type CourseId } from './core/catalog.ts';
+import './arcade.css';
+import {
+  BOARDS,
+  RIDERS,
+  COURSES,
+  RANKS,
+  rankFor,
+  type CourseId,
+  type Cosmetic,
+} from './core/catalog.ts';
 import {
   createRun,
   stepRun,
@@ -12,7 +20,10 @@ import {
 } from './core/game.ts';
 import { loadProfile, saveProfile, buyOrEquip, completeRun } from './core/profile.ts';
 import type { RoomSnapshot } from './core/protocol.ts';
-import { OceanScene } from './scene.ts';
+import { OceanScene } from './graphics/world.ts';
+import { BOARD_EFFECTS } from './graphics/assets.ts';
+import { CosmeticShowcase } from './graphics/showcase.ts';
+import { homeView, lockerView } from './ui/views.ts';
 import { GameAudio } from './audio.ts';
 import { Controls } from './input.ts';
 import { Multiplayer } from './network.ts';
@@ -87,6 +98,8 @@ let lobbySignature = '';
 let lastHud = 0;
 let lastNetworkInput = 0;
 let gamepadSeen = false;
+let showcase: CosmeticShowcase | null = null;
+let loadingRide = false;
 const params = new URLSearchParams(location.search);
 const inviteCode = (params.get('room') || '')
   .replace(/[^a-f0-9]/gi, '')
@@ -163,24 +176,8 @@ function render() {
     $('#screen').innerHTML = '';
     return;
   }
-  if (screen === 'home') {
-    $('#screen').innerHTML =
-      `<section class="home"><div class="eyebrow">GOOD WAVES. GREAT COMPANY.</div><h1>Chase the wake.<br><em>Find your flow.</em></h1><p class="intro">A board, a boat, and a whole lot of possibility.<br>Land big tricks. Make it your own. Ride together.</p><div class="hero-actions"><button class="button" data-action="ride">Let’s ride ${icon('arrow')}</button><button class="button secondary" data-action="multiplayer">Ride with friends ${icon('external')}</button></div><p class="course-label">PICK YOUR LITTLE PIECE OF PARADISE</p><div class="course-list">${COURSES.map((c, i) => `<button class="course-card ${c.id === courseId ? 'selected' : ''}" data-action="course" data-course="${c.id}" aria-pressed="${c.id === courseId}"><span class="course-number">0${i + 1} &nbsp; ${c.id === courseId ? '● SELECTED' : 'EXPLORE'}</span><span class="course-icon">${icon(c.icon)}</span><strong>${c.name}</strong></button>`).join('')}</div></section><div class="hero-stamp">LESS SCROLLING.<br>MORE SOUL.</div><div class="location-label"><small>${course.label}</small><strong>${course.name}</strong><span>${icon('pin')} 90 seconds of somewhere else</span></div>`;
-  }
-  if (screen === 'locker') {
-    const items = lockerTab === 'board' ? BOARDS : RIDERS;
-    $('#screen').innerHTML =
-      `<div class="panel-wrap"><section class="panel">${panelHead('A LITTLE MORE YOU', 'Style comes with the ride.', 'Earn Glide credits on the water. Make every run your own. All gear is cosmetic.')}<div class="tab-row"><button data-action="boards" class="${lockerTab === 'board' ? 'active' : ''}">Wakeboards · ${BOARDS.length}</button><button data-action="riders" class="${lockerTab === 'rider' ? 'active' : ''}">Riders · ${RIDERS.length}</button></div><div class="item-grid">${items
-        .map(item => {
-          const owned = profile.owned.includes(item.id);
-          const equipped = profile[lockerTab] === item.id;
-          const affordable = profile.credits >= item.price;
-          return `<article class="gear-card ${equipped ? 'equipped' : ''}" style="--item-color:${item.color};--item-accent:${item.accent}">${equipped ? `<span class="equipped-badge">${icon('check')} EQUIPPED</span>` : ''}<div class="gear-visual"><div class="${lockerTab === 'board' ? 'board-art' : 'rider-art'}"></div></div><span class="rarity ${item.rarity}">${item.rarity}</span><h3>${item.name}</h3><p>${item.subtitle}</p><button class="button ${equipped || (!affordable && !owned) ? 'secondary' : ''}" data-action="equip" data-item="${item.id}" ${equipped || (!affordable && !owned) ? 'disabled' : ''} title="${!affordable && !owned ? `Earn ${number(item.price - profile.credits)} more credits to unlock` : equipped ? 'Currently equipped' : ''}"><span>${equipped ? 'Ready for the water' : owned ? 'Equip' : 'Unlock'}</span><span>${owned ? icon(equipped ? 'check' : 'arrow') : `<span class="coin">G</span> ${number(item.price)}`}</span></button></article>`;
-        })
-        .join(
-          '',
-        )}</div><p class="help-footnote">A finished run turns every 10 points into 1 credit. Flow rings add 15 bonus credits each. Land 5 jumps for an extra 100.</p></section></div>`;
-  }
+  if (screen === 'home') $('#screen').innerHTML = homeView(courseId, profile, icon);
+  if (screen === 'locker') $('#screen').innerHTML = lockerView(profile, lockerTab, icon);
   if (screen === 'rankings') {
     const rank = rankFor(profile.xp);
     const bestRuns = [...profile.runs].sort((a, b) => b.score - a.score).slice(0, 8);
@@ -228,7 +225,19 @@ function navigate(next: Screen) {
   }
   render();
 }
-function startSolo() {
+async function startSolo() {
+  if (loadingRide) return;
+  const fromScreen = screen;
+  loadingRide = true;
+  try {
+    await ocean.rider.ready;
+  } catch {
+    loadingRide = false;
+    toast('Your rider could not load. Reload the page and try again.');
+    return;
+  }
+  loadingRide = false;
+  if (screen !== fromScreen) return;
   network.leave();
   ocean.clearRemote();
   isMultiplayer = false;
@@ -318,7 +327,34 @@ function updateHud() {
 }
 
 const modal = $('#modal') as HTMLDialogElement;
+function disposeShowcase() {
+  showcase?.dispose();
+  showcase = null;
+  modal.className = 'modal';
+}
+function openCosmetic(item: Cosmetic, kind: 'board' | 'rider', unlocked = false) {
+  disposeShowcase();
+  const owned = profile.owned.includes(item.id),
+    equipped = profile[kind] === item.id;
+  const effect = kind === 'board' ? BOARD_EFFECTS[item.id] : null;
+  modal.className = `modal cosmetic-modal ${unlocked ? 'unlocked' : ''}`;
+  modal.style.setProperty('--preview-color', `${item.color}40`);
+  const confetti =
+    unlocked && !profile.settings.reducedMotion
+      ? `<div class="celebration" aria-hidden="true">${Array.from({ length: 42 }, (_, i) => `<i style="--x:${(i * 61.8) % 100}%;--c:${['#ffda55', '#ff897a', '#77e5ee', '#baa3fa'][i % 4]};--r:${i * 47}deg;--d:${2.3 + (i % 5) * 0.27}s;--delay:${(i % 7) * 0.065}s"></i>`).join('')}</div>`
+      : '';
+  modal.innerHTML = `${confetti}<button class="icon-button" data-action="close-modal" aria-label="Close cosmetic preview">${icon('close')}</button><div class="eyebrow">${unlocked ? '✦ A FRESH NEW FLEX. ALL YOURS!' : kind === 'board' ? 'MEET YOUR NEXT FAVORITE BOARD' : 'YOUR CREW JUST GOT COOLER'}</div><h2>${item.name}</h2><p>${unlocked ? 'Unlocked, equipped, and ready to make waves.' : item.subtitle}</p><div class="cosmetic-stage" id="cosmetic-stage" aria-label="Interactive 3D preview of ${item.name}"></div><p class="preview-drag-hint">DRAG TO SPIN · SCROLL OR PINCH TO ZOOM</p><div class="cosmetic-effect"><strong>${effect ? `${effect.symbol} ${effect.name}` : '★ Big personality. Bigger tricks.'}</strong><p>${effect ? effect.description : 'A fully animated rider with a distinct outfit, hair, and a signature look.'}</p></div><div class="modal-actions">${unlocked ? `<button class="button" data-action="preview-ride">Take it for a spin! ${icon('arrow')}</button>` : `<button class="button" data-action="equip" data-item="${item.id}" data-kind="${kind}" ${equipped || (!owned && profile.credits < item.price) ? 'disabled' : ''}>${equipped ? 'Already equipped' : owned ? 'Equip & go' : `Unlock · <span class="coin">G</span> ${number(item.price)}`}</button>`}<button class="button secondary" data-action="close-modal">${unlocked ? 'Keep browsing' : 'Back to the locker'}</button></div>`;
+  if (!modal.open) modal.showModal();
+  showcase = new CosmeticShowcase(
+    $('#cosmetic-stage'),
+    kind,
+    item.id,
+    unlocked,
+    profile.settings.reducedMotion,
+  );
+}
 function openModal(kind: 'settings' | 'pause' | 'quit') {
+  disposeShowcase();
   if (screen === 'playing' && !isMultiplayer) paused = true;
   controls.enabled = false;
   controls.clear();
@@ -331,6 +367,7 @@ function openModal(kind: 'settings' | 'pause' | 'quit') {
   if (!modal.open) modal.showModal();
 }
 function closeModal() {
+  disposeShowcase();
   modal.close();
   paused = false;
   accumulator = 0;
@@ -489,26 +526,45 @@ app.addEventListener('click', async event => {
     render();
   }
   if (action === 'ride') {
-    startSolo();
+    await startSolo();
+  }
+  if (action === 'inspect') {
+    const kind = button.dataset.kind === 'rider' ? 'rider' : 'board';
+    const item = (kind === 'board' ? BOARDS : RIDERS).find(x => x.id === button.dataset.item);
+    if (item) openCosmetic(item, kind);
+  }
+  if (action === 'preview-ride') {
+    closeModal();
+    await startSolo();
   }
   if (action === 'boards' || action === 'riders') {
     lockerTab = action === 'boards' ? 'board' : 'rider';
     render();
   }
   if (action === 'equip') {
-    const item = [...BOARDS, ...RIDERS].find(x => x.id === button.dataset.item)!;
-    const status = buyOrEquip(profile, item, lockerTab);
+    const kind =
+      button.dataset.kind === 'rider'
+        ? 'rider'
+        : button.dataset.kind === 'board'
+          ? 'board'
+          : lockerTab;
+    const item = (kind === 'board' ? BOARDS : RIDERS).find(x => x.id === button.dataset.item);
+    if (!item) return;
+    const status = buyOrEquip(profile, item, kind);
     if (status === 'insufficient') {
       toast('A few more waves and this one is yours.');
       return;
     }
     persist();
     ocean.equip(profile.board, profile.rider);
-    if (status === 'bought') audio.play('buy');
-    toast(
-      `${item.name} ${status === 'bought' ? 'unlocked and equipped' : 'equipped'}. Looking good.`,
-    );
     render();
+    if (status === 'bought') {
+      audio.play('buy');
+      openCosmetic(item, kind, true);
+    } else {
+      if (modal.open) closeModal();
+      toast(`${item.name} equipped. Looking good!`);
+    }
   }
   if (action === 'settings' || action === 'pause') openModal(action);
   if (action === 'close-modal') closeModal();
@@ -656,7 +712,16 @@ Object.defineProperty(window, '__SURFER_GLIDE__', {
       return gamepadSeen;
     },
     get ready() {
-      return true;
+      return ocean.rider.loaded;
+    },
+    get assets() {
+      return {
+        loaded: ocean.rider.loaded,
+        board: ocean.rider.boardId,
+        rider: ocean.rider.riderId,
+        source: 'Blender MCP',
+        drawCalls: ocean.renderer.info.render.calls,
+      };
     },
   },
 });

@@ -10,6 +10,7 @@ export class Controls {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement)
         return;
       if (event.code === 'Escape') {
+        event.preventDefault();
         this.onPause();
         return;
       }

@@ -1,8 +1,8 @@
 # Surfer Glide
 
-**Chase the wake. Find your flow.**
+**Make some waves!**
 
-An original 3D wakeboarding arcade game built with Three.js, TypeScript, and a Node.js WebSocket server. Carve behind a boat, launch off its wake, combine tricks, and turn your best runs into a personal collection of boards and riders.
+An original, colorful 3D wakeboarding arcade game with models and skeletal animations authored in Blender through MCP, rendered with Three.js, and powered by a Node.js multiplayer server. Carve behind a boat, launch off its wake, combine tricks, and turn your best runs into a collection of boards and riders.
 
 ## Play locally
 
@@ -34,7 +34,10 @@ Completed runs bank **1 Glide credit per 10 points**, **15 extra credits per rin
 
 ## Features
 
-- Procedural ocean, animated wake, towboat, rope, spray, tropical islands, and a controllable 3D rider.
+- Rolling ocean swells with surface normals, layered wake ridges, animated foam, sunlight, and board spray. Riders follow the same water surface drawn by the shader.
+- Four original Blender characters with distinct faces, hair, outfits, and a 13-bone skeleton. Nine animation clips cover cruising, carving, jumps, grabs, landings, wipeouts, and celebrations.
+- Six original Blender boards with shaped rocker decks, graphics, bindings, fins, and individual cosmetic particle trails.
+- Colorful cartoon menus, a sticker-style HUD, Blender-rendered thumbnails, interactive 3D previews, and purchase celebrations with animated models and confetti.
 - Palm Lagoon, Sunset Cove, and Glacier Bay, each with a distinct palette and seeded ring / buoy placement.
 - Six boards and four riders, with purchases, equip states, and previews in the locker.
 - Six lifetime ranks, a personal best, and a logbook of the last 40 sessions.
@@ -82,7 +85,11 @@ Run one server instance: rooms live in memory. Multiple independent instances do
 
 Credits, owned gear, ranks, and the logbook are stored in this browser’s `localStorage`. Clearing browser data clears that profile. They are not cloud accounts or a global competitive leaderboard, and local save files are not cheat-proof. Multiplayer sessions have server-calculated scores; persistent, account-backed competition would need an identity and database service.
 
-The game renders its own geometry and creates audio locally. The optional Google Fonts stylesheet falls back to system fonts if unavailable. No Nintendo characters, models, music, or extracted assets are included.
+The game ships original Blender models and animations in `public/models/`, and creates water, environment geometry, effects, and audio locally. The optional Google Fonts stylesheet falls back to system fonts if unavailable. No Nintendo characters, models, music, or extracted assets are included. Players do not need Blender or MCP installed.
+
+## Blender asset pipeline
+
+The remake was authored in Blender 5.2.2 LTS via the installed [MCP for Blender](https://github.com/ahujasid/mcp-for-blender) server using the standard MCP Python client. Exported GLBs and PNG previews are included. See [the asset authoring guide](assets/blender/README.md) for the reproducible scripts and animation contract.
 
 ## Development
 
@@ -94,19 +101,25 @@ npm run build       # Type check and production bundle
 node scripts/smoke.mjs  # Check a running production server (optional URL argument)
 ```
 
-| Path                   | Responsibility                                                    |
-| ---------------------- | ----------------------------------------------------------------- |
-| `src/core/game.ts`     | Fixed-step simulation, physics, tricks, scoring, pickups, rewards |
-| `src/core/catalog.ts`  | Boards, riders, courses, rank thresholds                          |
-| `src/core/profile.ts`  | Save validation, purchases, and idempotent run settlement         |
-| `src/core/protocol.ts` | Shared multiplayer message types                                  |
-| `src/scene.ts`         | Procedural Three.js world, shaders, camera, and rider poses       |
-| `src/audio.ts`         | Original Web Audio sound design and soundtrack                    |
-| `src/input.ts`         | Keyboard, gamepad, and multitouch input                           |
-| `src/main.ts`          | Menus, locker, HUD, results, and gameplay lifecycle               |
-| `src/network.ts`       | Browser WebSocket client                                          |
-| `server/rooms.ts`      | Authoritative room simulation and lifecycle                       |
-| `server/index.ts`      | Development / production HTTP and WebSocket server                |
+| Path                       | Responsibility                                                    |
+| -------------------------- | ----------------------------------------------------------------- |
+| `src/core/game.ts`         | Fixed-step simulation, physics, tricks, scoring, pickups, rewards |
+| `src/core/catalog.ts`      | Boards, riders, courses, rank thresholds                          |
+| `src/core/profile.ts`      | Save validation, purchases, and idempotent run settlement         |
+| `src/core/protocol.ts`     | Shared multiplayer message types                                  |
+| `src/graphics/world.ts`    | World, environment, camera, towboat, and multiplayer riders       |
+| `src/graphics/water.ts`    | Wave and foam shaders with matching CPU surface sampling          |
+| `src/graphics/assets.ts`   | Blender loading, skeleton cloning, animation blending             |
+| `src/graphics/effects.ts`  | Board trails, spray, and landing bursts                           |
+| `src/graphics/showcase.ts` | Interactive 3D cosmetic previews and unlock animations            |
+| `src/ui/views.ts`          | Colorful home screen and cosmetic shop                            |
+| `src/arcade.css`           | Responsive cartoon UI and purchase celebrations                   |
+| `src/audio.ts`             | Original Web Audio sound design and soundtrack                    |
+| `src/input.ts`             | Keyboard, gamepad, and multitouch input                           |
+| `src/main.ts`              | Menus, locker, HUD, results, and gameplay lifecycle               |
+| `src/network.ts`           | Browser WebSocket client                                          |
+| `server/rooms.ts`          | Authoritative room simulation and lifecycle                       |
+| `server/index.ts`          | Development / production HTTP and WebSocket server                |
 
 Read-only diagnostics are available at `window.__SURFER_GLIDE__` for local browser testing. They return cloned state and provide no score or currency mutation commands.
 

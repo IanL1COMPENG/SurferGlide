@@ -15,6 +15,17 @@ const asset = await fetch(new URL(bundle[1], base));
 assert.equal(asset.status, 200);
 assert.match(asset.headers.get('content-type'), /javascript/);
 
+for (const name of ['rider-kai', 'board-daybreak']) {
+  const model = await fetch(new URL(`/models/${name}.glb`, base));
+  assert.equal(model.status, 200);
+  assert.match(model.headers.get('content-type'), /model\/gltf-binary/);
+  const bytes = new Uint8Array(await model.arrayBuffer());
+  assert.equal(String.fromCharCode(...bytes.subarray(0, 4)), 'glTF');
+}
+const preview = await fetch(new URL('/previews/rider-kai.png', base));
+assert.equal(preview.status, 200);
+assert.match(preview.headers.get('content-type'), /image\/png/);
+
 const url = new URL('/ws', base);
 url.protocol = base.protocol === 'https:' ? 'wss:' : 'ws:';
 await new Promise((resolve, reject) => {
@@ -57,5 +68,5 @@ await new Promise((resolve, reject) => {
   });
 });
 console.log(
-  'Production smoke passed: health, HTML, built JavaScript, WebSocket handshake, room creation, and cleanup.',
+  'Production smoke passed: health, HTML, JavaScript, Blender GLBs, PNG previews, WebSocket handshake, room creation, and cleanup.',
 );

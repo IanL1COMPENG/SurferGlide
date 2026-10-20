@@ -7,3 +7,7 @@ dist/
 .DS_Store
 coverage/
 artifacts/
+__pycache__/
+*.pyc
+*.blend1
+*.blend2

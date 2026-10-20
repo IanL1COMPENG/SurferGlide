@@ -14,6 +14,7 @@ const vite = production
       await import('vite')
     ).createServer({ root, server: { middlewareMode: true }, appType: 'spa' });
 const mime: Record<string, string> = {
+  '.glb': 'model/gltf-binary',
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript',
   '.css': 'text/css',
