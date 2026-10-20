@@ -1,0 +1,119 @@
+# Surfer Glide
+
+**Chase the wake. Find your flow.**
+
+An original 3D wakeboarding arcade game built with Three.js, TypeScript, and a Node.js WebSocket server. Carve behind a boat, launch off its wake, combine tricks, and turn your best runs into a personal collection of boards and riders.
+
+## Play locally
+
+Install [Node.js 22.12+](https://nodejs.org/), then run:
+
+```sh
+npm install
+npm run dev
+```
+
+Open **http://localhost:3000** (or **http://127.0.0.1:3000**). The same process serves the game and multiplayer. No accounts, API keys, paid services, or external game assets are required.
+
+## On the water
+
+You have **90 seconds** to set a high score. The boat handles forward motion. Carve through a white wake line with speed to launch automatically, or charge and release a jump. Combine spins, flips, and grabs, then release rotation controls before touchdown to straighten your board.
+
+| Action                    | Keyboard                     | Xbox-style gamepad | Touch                |
+| ------------------------- | ---------------------------- | ------------------ | -------------------- |
+| Carve                     | A / D or left / right arrows | Left stick         | Left / right buttons |
+| Charge jump, then release | Space                        | A                  | Hold / release Jump  |
+| Spin in the air           | X                            | X                  | Spin                 |
+| Indy grab                 | Z                            | B                  | Grab                 |
+| Backflip                  | C                            | Y                  | Flip                 |
+| Pause solo / match menu   | Escape                       | —                  | Pause icon           |
+
+Clean landings build a **1×–5× flow multiplier**. Gold flow rings award 100 points. Jump over coral buoys; hitting one or landing an unfinished rotation causes a wipeout and resets the multiplier. Recovery is automatic.
+
+Completed runs bank **1 Glide credit per 10 points**, **15 extra credits per ring**, and **100 bonus credits for at least five clean landings**. Points also become lifetime rank XP. Gear never changes performance.
+
+## Features
+
+- Procedural ocean, animated wake, towboat, rope, spray, tropical islands, and a controllable 3D rider.
+- Palm Lagoon, Sunset Cove, and Glacier Bay, each with a distinct palette and seeded ring / buoy placement.
+- Six boards and four riders, with purchases, equip states, and previews in the locker.
+- Six lifetime ranks, a personal best, and a logbook of the last 40 sessions.
+- Private six-character multiplayer rooms for 2–6 riders, synchronized countdowns, live crew scores, rematches, and automatic host handoff.
+- Keyboard, touch, and standard gamepad support. Mobile layouts and a graphics quality setting.
+- Original procedural sound effects, ocean ambience, and music, with volume and music controls.
+- Reduced camera motion, solo pause on focus loss, accessible HTML menus, and keyboard focus states.
+
+## Ride with friends
+
+1. Open **Ride with friends**, enter a rider name, and create a room.
+2. Share the code or the invite link. Everyone must connect to **the same running server**.
+3. The captain starts the session once at least two riders have joined.
+4. After the session, return to the crew for a rematch. If the captain disconnects, the next rider becomes captain.
+
+On a shared network, friends can open `http://YOUR-COMPUTER-LAN-IP:3000`. The server listens on all interfaces. A localhost invite only works on the host computer; use the LAN or deployed URL before copying an invite. Internet play requires deploying this server to a Node host with WebSocket support. A static-only host cannot run multiplayer.
+
+Multiplayer scoring runs on the server using the same deterministic fixed-step simulation as solo play. Clients submit controls, never score values. Idle or disconnected inputs expire, rooms are limited to six riders, websocket payloads and message rates are bounded, and empty rooms are cleaned up.
+
+## Production
+
+```sh
+npm ci
+npm test
+npm run build
+npm start
+```
+
+`PORT` defaults to 3000. `NODE_ENV=production` or the start script serves the built `dist/` directory. `/healthz` returns a health response. Deploy behind HTTPS; browsers automatically use secure WebSockets on HTTPS pages.
+
+### Render
+
+The included `render.yaml` declares a single Node web service. Connect this repository in Render and create a Blueprint deployment. Select the hosting plan that suits your use. The build and start commands are already configured.
+
+### Docker
+
+```sh
+docker build -t surfer-glide .
+docker run --rm -p 3000:3000 surfer-glide
+```
+
+Run one server instance: rooms live in memory. Multiple independent instances do not share room codes; a production cluster would need shared room coordination.
+
+## Progress and scope
+
+Credits, owned gear, ranks, and the logbook are stored in this browser’s `localStorage`. Clearing browser data clears that profile. They are not cloud accounts or a global competitive leaderboard, and local save files are not cheat-proof. Multiplayer sessions have server-calculated scores; persistent, account-backed competition would need an identity and database service.
+
+The game renders its own geometry and creates audio locally. The optional Google Fonts stylesheet falls back to system fonts if unavailable. No Nintendo characters, models, music, or extracted assets are included.
+
+## Development
+
+```sh
+npm run check       # Strict TypeScript checks
+npm run format      # Format source and documentation with Prettier
+npm test            # Gameplay, economy, progression, and real WebSocket integration tests
+npm run build       # Type check and production bundle
+node scripts/smoke.mjs  # Check a running production server (optional URL argument)
+```
+
+| Path                   | Responsibility                                                    |
+| ---------------------- | ----------------------------------------------------------------- |
+| `src/core/game.ts`     | Fixed-step simulation, physics, tricks, scoring, pickups, rewards |
+| `src/core/catalog.ts`  | Boards, riders, courses, rank thresholds                          |
+| `src/core/profile.ts`  | Save validation, purchases, and idempotent run settlement         |
+| `src/core/protocol.ts` | Shared multiplayer message types                                  |
+| `src/scene.ts`         | Procedural Three.js world, shaders, camera, and rider poses       |
+| `src/audio.ts`         | Original Web Audio sound design and soundtrack                    |
+| `src/input.ts`         | Keyboard, gamepad, and multitouch input                           |
+| `src/main.ts`          | Menus, locker, HUD, results, and gameplay lifecycle               |
+| `src/network.ts`       | Browser WebSocket client                                          |
+| `server/rooms.ts`      | Authoritative room simulation and lifecycle                       |
+| `server/index.ts`      | Development / production HTTP and WebSocket server                |
+
+Read-only diagnostics are available at `window.__SURFER_GLIDE__` for local browser testing. They return cloned state and provide no score or currency mutation commands.
+
+## Development skills
+
+The requested [Three.js audio](https://github.com/alton47/threejs-skills/tree/main/skills/threejs-audio) and [Three.js animation](https://github.com/alton47/threejs-skills/tree/main/skills/threejs-animation) skills were installed into the developer’s Codex skills directory. They are development guidance, not runtime dependencies. See [docs/skills.md](docs/skills.md) for provenance and reinstall instructions.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
