@@ -1,3 +1,12 @@
+/** Public Render service supplied by the project owner; never a credential. */
+export const VERCEL_MULTIPLAYER_URL = 'wss://surferglide.onrender.com/ws';
+
+/** Local/Render builds stay same-origin; a configured Vercel override wins. */
+export function multiplayerBuildEndpoint(configured = '', isVercel = false): string {
+  const setting = configured.trim() || (isVercel ? VERCEL_MULTIPLAYER_URL : '');
+  return isVercel ? multiplayerEndpoint('https://deployment.invalid', setting).href : setting;
+}
+
 /** This is a public server address, never a credential or API key. */
 export function multiplayerEndpoint(pageAddress: string, configured = ''): URL {
   const page = new URL(pageAddress);

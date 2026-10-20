@@ -4,7 +4,11 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer } from 'node:http';
 import { WebSocket } from 'ws';
-import { multiplayerEndpoint, warmMultiplayer } from '../src/core/deployment.ts';
+import {
+  multiplayerBuildEndpoint,
+  multiplayerEndpoint,
+  warmMultiplayer,
+} from '../src/core/deployment.ts';
 import { isAllowedOrigin, parseAllowedOrigins } from '../server/origins.ts';
 
 test('deployment endpoints preserve local rooms and enforce safe HTTPS multiplayer', () => {
@@ -52,6 +56,18 @@ test('only same-origin and explicitly permitted frontends can use crew rooms', (
   ]) {
     assert.throws(() => parseAllowedOrigins(origin));
   }
+});
+
+test('Vercel builds use the verified Render service without requiring a dashboard variable', () => {
+  assert.equal(multiplayerBuildEndpoint(), '');
+  assert.equal(multiplayerBuildEndpoint('', true), 'wss://surferglide.onrender.com/ws');
+  assert.equal(multiplayerBuildEndpoint('   ', true), 'wss://surferglide.onrender.com/ws');
+  assert.equal(
+    multiplayerBuildEndpoint('https://custom-backend.example', true),
+    'wss://custom-backend.example/ws',
+  );
+  assert.throws(() => multiplayerBuildEndpoint('ws://insecure.example/ws', true));
+  assert.throws(() => multiplayerBuildEndpoint('wss://user:secret@backend.example/ws', true));
 });
 
 test('a sleeping backend can return proxy errors or HTML before multiplayer is ready', async t => {

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { loadEnv } from 'vite';
+import { multiplayerBuildEndpoint } from '../src/core/deployment.ts';
 
 const root = path.resolve('dist');
 const publicFiles = [
@@ -43,20 +45,10 @@ await inspect(root);
 assert.ok(count >= 25, 'Missing production bundles or game assets. Run npm run build first.');
 
 if (process.env.VERCEL === '1') {
-  assert.ok(
-    process.env.VITE_MULTIPLAYER_URL,
-    'Set the public VITE_MULTIPLAYER_URL in Vercel to preserve multiplayer.',
-  );
-  let endpoint;
-  try {
-    endpoint = new URL(process.env.VITE_MULTIPLAYER_URL);
-  } catch {
-    throw new Error('VITE_MULTIPLAYER_URL must be a valid public wss:// address.');
-  }
-  assert.equal(endpoint.protocol, 'wss:', 'Public multiplayer must use a secure wss:// URL.');
-  assert.ok(
-    !endpoint.username && !endpoint.password && !endpoint.search && !endpoint.hash,
-    'Multiplayer URLs must never contain credentials.',
+  // Use the same resolver and Vite environment loading as the actual build.
+  multiplayerBuildEndpoint(
+    loadEnv('production', process.cwd(), 'VITE_MULTIPLAYER_URL').VITE_MULTIPLAYER_URL,
+    true,
   );
 }
 console.log(

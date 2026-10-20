@@ -74,7 +74,7 @@ The included `render.yaml` declares a single **Free** Node web service. Connect 
 
 ### Vercel + free multiplayer backend
 
-Follow the [exact GitHub, Vercel, and Render deployment guide](docs/vercel-deployment.md). Vercel serves `dist/` using the included `vercel.json`; the existing Node simulation runs on one Render Free service. Set the public `VITE_MULTIPLAYER_URL` in Vercel and the exact frontend `ALLOWED_ORIGINS` on the backend. Local development keeps using same-origin `/ws` when the endpoint is empty.
+Follow the [exact GitHub, Vercel, and Render deployment guide](docs/vercel-deployment.md). Vercel serves `dist/` using the included `vercel.json`; the existing Node simulation runs on the owner's public `surferglide.onrender.com` service by default. The optional public `VITE_MULTIPLAYER_URL` overrides that address. Set the exact frontend `ALLOWED_ORIGINS` on the backend. Local development and direct Node deployments keep using same-origin `/ws` when the endpoint is empty.
 
 The normal production build passes. Deployment changes preserve the game and design, disable public source maps, and add an output/private-file check. Vercel Hobby is for personal, non-commercial projects; Render Free can sleep and restart. See the guide for limits, cold starts, preview origins, account setup, and verification. The game requires no API keys.
 

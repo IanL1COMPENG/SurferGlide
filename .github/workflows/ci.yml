@@ -17,4 +17,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+        env:
+          VERCEL: '1'
       - run: npm run verify:deploy
+        env:
+          VERCEL: '1'

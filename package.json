@@ -10,7 +10,7 @@
     "start": "tsx server/index.ts --production",
     "test": "tsx --test tests/*.test.ts",
     "check": "tsc --noEmit",
-    "verify:deploy": "node scripts/check-deploy.mjs",
+    "verify:deploy": "tsx scripts/check-deploy.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

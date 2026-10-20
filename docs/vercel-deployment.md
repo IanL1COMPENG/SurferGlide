@@ -67,7 +67,7 @@ The included `render.yaml` describes the same service with `plan: free`. If you 
 | Node.js Version   | **22.x**, pinned by `package.json`       |
 | Production Branch | `main`                                   |
 
-4. Add this **public build-time** environment variable before deploying:
+4. This project now defaults to the owner's verified public backend at `https://surferglide.onrender.com`. **No Vercel environment variable is required for that service.** To use a different backend, optionally set this public build-time override:
 
 ```text
 VITE_MULTIPLAYER_URL=wss://YOUR-SERVICE.onrender.com/ws
@@ -78,7 +78,7 @@ Use your actual Render service name. Select the **Production** environment. You 
 5. Click **Deploy**. Copy the final production origin, such as `https://YOUR-PROJECT.vercel.app`. The exact project name may differ if your preferred name is taken.
 6. In **Settings > Deployment Protection**, ensure visitors can access the **Production** domain publicly. Preview deployments may remain protected. Keep the free `vercel.app` domain; no custom domain purchase is required.
 
-`VITE_` variables are bundled at build time. Changing them requires a new deployment: **Deployments > latest deployment > Redeploy**. The deployment check intentionally fails on Vercel when the multiplayer URL is missing or insecure, so a seemingly successful static deployment does not silently lose multiplayer.
+`VITE_` variables are bundled at build time. Changing them requires a new deployment: **Deployments > latest deployment > Redeploy**. The build and deployment check share the same endpoint resolver. An unset or blank override uses the verified Render service on Vercel; an explicit override takes precedence. Insecure addresses and URLs containing credentials still fail validation.
 
 The game uses `/` and query-string room invites such as `/?room=A1B2C3`. It has no path-based client router, so no catch-all rewrite is needed. Missing private files and nonexistent assets should stay missing.
 
@@ -94,7 +94,7 @@ ALLOWED_ORIGINS=https://YOUR-PROJECT.vercel.app
 
 Use the exact Vercel production origin: scheme and hostname, with no path, query, or wildcard. Save and redeploy the backend. You can allow additional domains using a comma-separated list, for example a custom domain and an exact preview deployment URL. Never use `*` or allow every `vercel.app` project.
 
-No `ALLOWED_ORIGINS` value is needed in Vercel. No `VITE_MULTIPLAYER_URL` value is needed on Render. Local development and an all-in-one Node deployment continue to use same-origin `/ws` when the Vite variable is empty.
+No `ALLOWED_ORIGINS` value is needed in Vercel. No `VITE_MULTIPLAYER_URL` value is needed on Render. Local development and an all-in-one Node deployment continue to use same-origin `/ws` when the Vite variable is empty. The built-in Render address applies only when `VERCEL=1` during the build.
 
 ## 5. Verify the public deployment
 
@@ -122,16 +122,16 @@ The deployment creates a new browser origin. A profile saved at `localhost:3000`
 
 ## Troubleshooting
 
-| Symptom                                     | Check                                                                                                   |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Vercel build cannot find TypeScript or Vite | Use `npm ci --include=dev`; build tools are development dependencies.                                   |
-| Vercel build asks for the multiplayer URL   | Add `VITE_MULTIPLAYER_URL=wss://ACTUAL-SERVICE.onrender.com/ws` for that deployment environment.        |
-| Solo works, multiplayer does not            | Backend `/healthz` must work; `ALLOWED_ORIGINS` must exactly match the frontend URL you opened.         |
-| Browser reports a mixed-content connection  | The public endpoint must use `wss://`, not `ws://`.                                                     |
-| A preview cannot join rooms                 | Allow that exact preview origin on the backend, or use the production URL.                              |
-| Connecting takes time after inactivity      | Render Free is waking. Keep the connection attempt open, then retry if necessary.                       |
-| A room code disappeared                     | Server restart/redeploy or another backend instance. Keep one server; create a new room after restarts. |
-| A new endpoint value has no effect          | Redeploy Vercel; Vite reads this variable during the build.                                             |
-| Models or styles fail to load               | Output Directory must be `dist`, not the repository root or `public`.                                   |
+| Symptom                                          | Check                                                                                                                                                             |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vercel build cannot find TypeScript or Vite      | Use `npm ci --include=dev`; build tools are development dependencies.                                                                                             |
+| An older deployment asks for the multiplayer URL | Deploy the latest `main` commit. The initial `de03406` commit required a variable; the corrected build includes the owner's Render service as its Vercel default. |
+| Solo works, multiplayer does not                 | Backend `/healthz` must work; `ALLOWED_ORIGINS` must exactly match the frontend URL you opened.                                                                   |
+| Browser reports a mixed-content connection       | The public endpoint must use `wss://`, not `ws://`.                                                                                                               |
+| A preview cannot join rooms                      | Allow that exact preview origin on the backend, or use the production URL.                                                                                        |
+| Connecting takes time after inactivity           | Render Free is waking. Keep the connection attempt open, then retry if necessary.                                                                                 |
+| A room code disappeared                          | Server restart/redeploy or another backend instance. Keep one server; create a new room after restarts.                                                           |
+| A new endpoint value has no effect               | Redeploy Vercel; Vite reads this variable during the build.                                                                                                       |
+| Models or styles fail to load                    | Output Directory must be `dist`, not the repository root or `public`.                                                                                             |
 
 No public deployment is created just by committing this configuration. Complete the account-side steps above and verify the returned public URL.
