@@ -86,13 +86,13 @@ See [Vite on Vercel](https://vercel.com/docs/frameworks/frontend/vite) and [GitH
 
 ## 4. Allow the public game to connect to the backend
 
-In the Render service's **Environment** settings, set:
+The owner's verified production origin `https://surfer-glide.vercel.app` is now explicitly trusted by the backend. That site requires no additional Render origin setting after deploying the current source. For a different public domain or an additional preview domain, set this in the Render service's **Environment** settings:
 
 ```text
 ALLOWED_ORIGINS=https://YOUR-PROJECT.vercel.app
 ```
 
-Use the exact Vercel production origin: scheme and hostname, with no path, query, or wildcard. Save and redeploy the backend. You can allow additional domains using a comma-separated list, for example a custom domain and an exact preview deployment URL. Never use `*` or allow every `vercel.app` project.
+Use the exact additional origin: scheme and hostname, with no path, query, or wildcard. Save and redeploy the backend. You can allow additional domains using a comma-separated list, for example a custom domain and an exact preview deployment URL. Never use `*` or allow every `vercel.app` project. A fork of this project should replace the built-in production origin in `server/origins.ts` and the Vercel backend default in `src/core/deployment.ts` with its own verified addresses.
 
 No `ALLOWED_ORIGINS` value is needed in Vercel. No `VITE_MULTIPLAYER_URL` value is needed on Render. Local development and an all-in-one Node deployment continue to use same-origin `/ws` when the Vite variable is empty. The built-in Render address applies only when `VERCEL=1` during the build.
 

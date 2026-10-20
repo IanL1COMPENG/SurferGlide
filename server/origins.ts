@@ -1,3 +1,10 @@
+/** The owner's verified production frontend; additional origins remain explicit. */
+export const PRODUCTION_FRONTEND_ORIGIN = 'https://surfer-glide.vercel.app';
+
+export function deploymentAllowedOrigins(value = ''): ReadonlySet<string> {
+  return parseAllowedOrigins([PRODUCTION_FRONTEND_ORIGIN, value].filter(Boolean).join(','));
+}
+
 /** Keep cross-origin access explicit; never grant every vercel.app project access. */
 export function parseAllowedOrigins(value = ''): ReadonlySet<string> {
   const origins = new Set<string>();

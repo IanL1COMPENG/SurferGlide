@@ -9,7 +9,11 @@ import {
   multiplayerEndpoint,
   warmMultiplayer,
 } from '../src/core/deployment.ts';
-import { isAllowedOrigin, parseAllowedOrigins } from '../server/origins.ts';
+import {
+  deploymentAllowedOrigins,
+  isAllowedOrigin,
+  parseAllowedOrigins,
+} from '../server/origins.ts';
 
 test('deployment endpoints preserve local rooms and enforce safe HTTPS multiplayer', () => {
   assert.equal(
@@ -56,6 +60,26 @@ test('only same-origin and explicitly permitted frontends can use crew rooms', (
   ]) {
     assert.throws(() => parseAllowedOrigins(origin));
   }
+});
+
+test('the verified production domain is trusted without opening unrelated deployments', () => {
+  const origins = deploymentAllowedOrigins('https://custom.example');
+  assert.ok(
+    isAllowedOrigin('https://surfer-glide.vercel.app', 'surferglide.onrender.com', origins),
+  );
+  assert.ok(isAllowedOrigin('https://custom.example', 'surferglide.onrender.com', origins));
+  assert.equal(
+    isAllowedOrigin('https://other.vercel.app', 'surferglide.onrender.com', origins),
+    false,
+  );
+  assert.equal(
+    isAllowedOrigin(
+      'https://surfer-glide.vercel.app.evil.example',
+      'surferglide.onrender.com',
+      origins,
+    ),
+    false,
+  );
 });
 
 test('Vercel builds use the verified Render service without requiring a dashboard variable', () => {
@@ -128,6 +152,13 @@ test('production backend accepts the Vercel frontend and rejects unrelated WebSo
   assert.equal(health.headers.get('access-control-allow-origin'), origin);
   assert.equal(health.headers.get('vary'), 'Origin');
   assert.equal((await health.json()).game, 'Surfer Glide');
+  const productionHealth = await fetch(`${base}/healthz`, {
+    headers: { Origin: 'https://surfer-glide.vercel.app' },
+  });
+  assert.equal(
+    productionHealth.headers.get('access-control-allow-origin'),
+    'https://surfer-glide.vercel.app',
+  );
   const other = await fetch(`${base}/healthz`, { headers: { Origin: 'https://other.vercel.app' } });
   assert.equal(other.headers.get('access-control-allow-origin'), null);
   await new Promise<void>((resolve, reject) => {

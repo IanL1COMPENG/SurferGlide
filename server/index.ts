@@ -4,11 +4,11 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { WebSocketServer } from 'ws';
 import { attachRooms } from './rooms.ts';
-import { isAllowedOrigin, parseAllowedOrigins } from './origins.ts';
+import { deploymentAllowedOrigins, isAllowedOrigin } from './origins.ts';
 
 const production = process.argv.includes('--production') || process.env.NODE_ENV === 'production';
 const port = Number(process.env.PORT || 3000);
-const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
+const allowedOrigins = deploymentAllowedOrigins(process.env.ALLOWED_ORIGINS);
 const root = path.resolve(fileURLToPath(new URL('../', import.meta.url)));
 const vite = production
   ? null
